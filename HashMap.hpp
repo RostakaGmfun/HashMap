@@ -185,16 +185,7 @@ public:
     }
     
     void remove(const LinkedListIterator<T> &i) {
-        ListItem<T> *cur = *i;
-        ListItem<T> *prev = cur->prev;
-        ListItem<T> *next = cur->next;
-        if(prev) {
-            prev->next = next;
-        }
-        if(next) {
-            next->prev = prev;
-        }
-        delete cur;
+        remove(*i);
     }
 
     void remove(const std::size_t n) {
