@@ -59,3 +59,44 @@ TEST_CASE( "LinkedList Test", "[LinkedList]") {
     }
 }
 
+TEST_CASE("Array Test", "[Array]") {
+    SECTION("Basic Test") {
+        Array<int> array;
+        REQUIRE( array.size() == 0 );
+        REQUIRE( array.data() != nullptr );
+
+        int oldCapacity = array.capacity();
+
+        for(int i = 0;i<oldCapacity;i++) {
+            array.pushBack(i);
+        }
+
+        REQUIRE( array.capacity() == oldCapacity );
+        array.pushBack(42);
+        REQUIRE( array.capacity() == oldCapacity*2 );
+        array.clear();
+        REQUIRE( array.size() == 0 );
+    }
+
+    SECTION("Array iteration") {
+        Array<int> array;
+        REQUIRE( array.size() == 0 );
+        REQUIRE( array.data() != nullptr );
+
+        const int numElements = 100;
+        
+        std::string expected;
+        for(int i = 0;i<numElements;i++) {
+            array.pushBack(i);
+            expected+=std::to_string(i);
+        }
+        
+        std::string got;
+        for( const auto &it : array) {
+            got+=std::to_string(it);
+        }
+
+        REQUIRE( got == expected );
+    }
+}
+

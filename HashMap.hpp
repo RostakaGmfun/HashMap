@@ -280,7 +280,7 @@ public:
         m_capacity = other.m_capacity;
         m_size = other.m_size;
         m_array = new T[m_capacity];
-        std::copy(m_array, other.m_array, m_size);
+        std::copy(other.m_array, other.m_array+other.m_size, m_array);
     }
 
     Array(Array &&other) {
@@ -324,7 +324,7 @@ public:
         if(m_size>m_capacity) {
             m_capacity*=2;
             T *newArray = new T[m_capacity];
-            std::copy(newArray, m_array, m_size);
+            std::copy(m_array, m_array+m_size, newArray);
             delete [] m_array;
             m_array = newArray;
         }
@@ -353,7 +353,7 @@ public:
     ArrayIterator(): m_itr(nullptr)
     {}
 
-    explicit ArrayIterator(const Array<T> &arr): m_itr(arr.data())
+    explicit ArrayIterator(T *data): m_itr(data)
     {}
 
     void swap(ArrayIterator &other) {
