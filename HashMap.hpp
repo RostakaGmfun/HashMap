@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
+#include <cassert>
+#include <iostream>
 
 /**
  * @biref A generic hash function
@@ -56,7 +58,7 @@ public:
     LinkedListIterator(): m_itr(nullptr)
     {}
 
-    explicit LinkedListIterator(const ListItem<T> *it): m_itr(it)
+    explicit LinkedListIterator(ListItem<T> *it): m_itr(it)
     {}
 
     void swap(LinkedListIterator &other) {
@@ -69,22 +71,26 @@ public:
     }
     
     // post-increment
-    LinkedListIterator &operator++(LinkedListIterator) {
+    LinkedListIterator &operator++(int) {
         LinkedListIterator itr(*this);
         m_itr = m_itr->next;
         return itr;
     }
 
-    T &operator*() const {
-        return m_itr->value;
+    ListItem<T> *operator*() const {
+        return m_itr;
     }
     
-    T &operator->() const {
-        return m_itr->value;
+    ListItem<T> *operator->() const {
+        return m_itr;
     }
 
     bool operator==(const LinkedListIterator &other) const {
         return m_itr == other.m_itr; 
+    }
+    
+    bool operator!=(const LinkedListIterator &other) const {
+        return m_itr != other.m_itr; 
     }
 
 private:
@@ -143,13 +149,14 @@ public:
             return;
         }
         ListItem<T> *i = m_head;
-        ListItem<T> *tmp{};
-        do {
+        ListItem<T> *tmp = nullptr;
+        while(i) {
             tmp = i->next;
             delete i;
             i = tmp;
-        } while(i);
-
+        }
+        m_head = nullptr;
+        m_tail = nullptr;
     }
 
     void pushBack(const T &val) {
@@ -176,24 +183,46 @@ public:
         }
         delete i;
     }
-
-    const ListItem<T> *find(const T &v) {
-        if(!m_head)
-            return nullptr;
-        for(auto it : m_head) {
-            if(it->value == v)
-                return it;
+    
+    void remove(const LinkedListIterator<T> &i) {
+        ListItem<T> *cur = *i;
+        ListItem<T> *prev = cur->prev;
+        ListItem<T> *next = cur->next;
+        if(prev) {
+            prev->next = next;
         }
-        return nullptr;
+        if(next) {
+            next->prev = prev;
+        }
+        delete cur;
+    }
+
+    void remove(const std::size_t n) {
+        const auto &it = find(at(n));
+        if(it == end())
+            return;
+        remove(it);
+    }
+
+    LinkedListIterator<T> find(const T &v) {
+        if(!m_head)
+            return end();
+        for(const auto &it : *this) {
+            if((*it).value == v) {
+                return LinkedListIterator<T>(it);
+            }
+        }
+        return end();
     }
     
     std::size_t size() const {
         if(!m_head)
             return 0;
         std::size_t n = 0;
-        for(auto it : m_head) {
+        ListItem<T> *i = m_head;
+        do {
             n++;
-        }
+        } while((i = i->next));
         return n;
     }
 
@@ -201,12 +230,24 @@ public:
         return size() == 0;
     }
 
-    const LinkedListIterator<T> &begin() const {
-        return LinkedListIterator<T>(m_head);
+    LinkedListIterator<T> &&begin() const {
+        return std::move(LinkedListIterator<T>(m_head));
     }
 
-    const LinkedListIterator<T> &end() const {
-        return LinkedListIterator<T>(m_tail);
+    LinkedListIterator<T> &&end() const {
+        return std::move(LinkedListIterator<T>(nullptr));
+    }
+
+    T &at(std::size_t n) const {
+        for(const auto &it : *this) {
+            if(!n--) {
+                return it->value;
+            }
+        }
+    }
+
+    T &operator[](std::size_t n) const {
+        return at(n);
     }
     
 private:
@@ -289,12 +330,12 @@ public:
         }
     }
 
-    const ArrayIterator<T> &begin() const {
-        return ArrayIterator<T>(m_array);
+    const ArrayIterator<T> &&begin() const {
+        return std::move(ArrayIterator<T>(m_array));
     }
 
-    const ArrayIterator<T> &end() const {
-        return ArrayIterator<T>(m_array+m_size);
+    const ArrayIterator<T> &&end() const {
+        return std::move(ArrayIterator<T>(m_array+m_size));
     }
 
 private:
@@ -325,7 +366,7 @@ public:
     }
     
     // post-increment
-    ArrayIterator &operator++(ArrayIterator) {
+    ArrayIterator &operator++(int) {
         ArrayIterator itr(*this);
         m_itr++;
         return itr;
@@ -341,6 +382,10 @@ public:
 
     bool operator==(const ArrayIterator &other) const {
         return m_itr == other.m_itr; 
+    }
+    
+    bool operator!=(const ArrayIterator &other) const {
+        return m_itr != other.m_itr; 
     }
 
 private:
