@@ -114,7 +114,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
                 str.push_back('0'+std::rand()%('z'-'0'));
             }
             std::size_t h = hash(str);
-            if(*hashes.find(h) != *hashes.end()) {
+            if(hashes.find(h) != hashes.end()) {
                 err++;
             }
             hashes.pushBack(h);
@@ -126,7 +126,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
         err = 0;
         for(int i = 0;i<numHashes;i++) {
             std::size_t h = hash(std::int32_t(i));
-            if(*hashes.find(h) != *hashes.end()) {
+            if(hashes.find(h) != hashes.end()) {
                 err++;
             }
             hashes.pushBack(h);
@@ -142,7 +142,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
                 byteArray.pushBack(std::rand()%255);
             }
             std::size_t h = hash(byteArray);
-            if(*hashes.find(h) != *hashes.end()) {
+            if(hashes.find(h) != hashes.end()) {
                 err++;
             }
             hashes.pushBack(h);

@@ -311,11 +311,11 @@ public:
         }
     }
 
-    ArrayIterator<T> &&begin() const {
+    ArrayIterator<T> begin() const {
         return std::move(ArrayIterator<T>(m_array));
     }
 
-    ArrayIterator<T> &&end() const {
+    ArrayIterator<T> end() const {
         return std::move(ArrayIterator<T>(m_array+m_size));
     }
 
