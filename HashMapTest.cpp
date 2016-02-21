@@ -53,7 +53,7 @@ TEST_CASE( "LinkedList Test", "[LinkedList]") {
         }
         
         // dereference to overcome Catch dumbness
-        REQUIRE( *list.find(-1) == *list.end() );
+        REQUIRE( list.find(-1) == list.end() );
         REQUIRE( list.find(10)->next->value == 11 );
 
     }

@@ -211,12 +211,12 @@ public:
         return size() == 0;
     }
 
-    LinkedListIterator<T> &&begin() const {
-        return std::move(LinkedListIterator<T>(m_head));
+    LinkedListIterator<T> begin() const {
+        return LinkedListIterator<T>(m_head);
     }
 
-    LinkedListIterator<T> &&end() const {
-        return std::move(LinkedListIterator<T>(nullptr));
+    LinkedListIterator<T> end() const {
+        return LinkedListIterator<T>(nullptr);
     }
 
     T &at(std::size_t n) const {
@@ -312,11 +312,11 @@ public:
     }
 
     ArrayIterator<T> begin() const {
-        return std::move(ArrayIterator<T>(m_array));
+        return ArrayIterator<T>(m_array);
     }
 
     ArrayIterator<T> end() const {
-        return std::move(ArrayIterator<T>(m_array+m_size));
+        return ArrayIterator<T>(m_array+m_size);
     }
 
     ArrayIterator<T> find(const T &v) const {
