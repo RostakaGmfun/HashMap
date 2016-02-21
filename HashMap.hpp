@@ -34,8 +34,6 @@ std::size_t hash(const T &o);
 /**
  * @biref Template class which represents 
  * single element of linked list.
- *
- * Also is used as iterator of @LinkedList
  */
 template <typename T>
 struct ListItem {
@@ -44,17 +42,53 @@ struct ListItem {
                           next(nullptr)
     {}
 
-    const ListItem<T> *operator++() const {
-        return next;
-    }
-
-    bool operator==(const T &v) const {
-        return value == v;
-    }
-
     T value;
     ListItem *prev;
     ListItem *next;
+};
+
+/**
+ * @brief Iterator class for @LinkedList
+ */
+template <typename T>
+class LinkedListIterator: public std::iterator<std::forward_iterator_tag, ListItem<T>> {
+public:
+    LinkedListIterator(): m_itr(nullptr)
+    {}
+
+    explicit LinkedListIterator(const ListItem<T> *it): m_itr(it)
+    {}
+
+    void swap(LinkedListIterator &other) {
+        std::swap(m_itr, other.m_itr);
+    }
+    
+    // pre-increment
+    LinkedListIterator &operator++() {
+        m_itr = m_itr->next;
+    }
+    
+    // post-increment
+    LinkedListIterator &operator++(LinkedListIterator) {
+        LinkedListIterator itr(*this);
+        m_itr = m_itr->next;
+        return itr;
+    }
+
+    T &operator*() const {
+        return m_itr->value;
+    }
+    
+    T &operator->() const {
+        return m_itr->value;
+    }
+
+    bool operator==(const LinkedListIterator &other) const {
+        return m_itr == other.m_itr; 
+    }
+
+private:
+    ListItem<T> *m_itr;
 };
 
 /*
@@ -81,7 +115,7 @@ public:
     LinkedList(const LinkedList &other) {
         ListItem<T> *prev{};
 
-        for(auto &it : other) {
+        for(const auto &it : other) {
             ListItem<T> *i = new ListItem<T>(it.value);
             if(!m_head) {
                 m_head = i;
@@ -101,6 +135,10 @@ public:
     }
 
     ~LinkedList() {
+        clear();
+    }
+
+    void clear() {
         if(!m_head) {
             return;
         }
@@ -111,6 +149,7 @@ public:
             delete i;
             i = tmp;
         } while(i);
+
     }
 
     void pushBack(const T &val) {
@@ -119,6 +158,8 @@ public:
             m_tail = m_head;
         } else {
             m_tail->next = new ListItem<T>(val);  
+            m_tail->next->prev = m_tail;
+            m_tail = m_tail->next;
         }
     }
 
@@ -140,7 +181,7 @@ public:
         if(!m_head)
             return nullptr;
         for(auto it : m_head) {
-            if(it == v)
+            if(it->value == v)
                 return it;
         }
         return nullptr;
@@ -160,12 +201,12 @@ public:
         return size() == 0;
     }
 
-    const ListItem<T> *begin() const {
-        return m_head;
+    const LinkedListIterator<T> &begin() const {
+        return LinkedListIterator<T>(m_head);
     }
 
-    const ListItem<T> *end() const {
-        return m_tail;
+    const LinkedListIterator<T> &end() const {
+        return LinkedListIterator<T>(m_tail);
     }
     
 private:
@@ -173,6 +214,10 @@ private:
     ListItem<T> *m_tail;
 
 };
+
+// forward declare to use in @Array
+template <typename T>
+class ArrayIterator;
 
 /*
  * @biref Template class which represents
@@ -229,6 +274,10 @@ public:
         m_size = 0;
     }
 
+    const T *data() const {
+        return m_array;
+    }
+
     void pushBack(const T &element) {
         m_array[m_size++] = element;
         if(m_size>m_capacity) {
@@ -240,10 +289,62 @@ public:
         }
     }
 
+    const ArrayIterator<T> &begin() const {
+        return ArrayIterator<T>(m_array);
+    }
+
+    const ArrayIterator<T> &end() const {
+        return ArrayIterator<T>(m_array+m_size);
+    }
+
 private:
     T *m_array;
     std::size_t m_size;
     std::size_t m_capacity;
+};
+
+/**
+ * @biref Iterator for @Array container
+ */
+template <typename T>
+class ArrayIterator {
+public:
+    ArrayIterator(): m_itr(nullptr)
+    {}
+
+    explicit ArrayIterator(const Array<T> &arr): m_itr(arr.data())
+    {}
+
+    void swap(ArrayIterator &other) {
+        std::swap(m_itr, other.m_itr);
+    }
+    
+    // pre-increment
+    ArrayIterator &operator++() {
+        m_itr++;
+    }
+    
+    // post-increment
+    ArrayIterator &operator++(ArrayIterator) {
+        ArrayIterator itr(*this);
+        m_itr++;
+        return itr;
+    }
+
+    T &operator*() const {
+        return *m_itr;
+    }
+    
+    T &operator->() const {
+        return *m_itr;
+    }
+
+    bool operator==(const ArrayIterator &other) const {
+        return m_itr == other.m_itr; 
+    }
+
+private:
+    T *m_itr;
 };
 
 /*
@@ -291,9 +392,8 @@ public:
 
     std::size_t size() const {
         std::size_t n = 0;
-        // TODO: implement Iterator interface for @Array
-        for(int i = 0;i<m_buckets.size();i++) {
-            n+=m_buckets[i].size();
+        for(const auto &it : m_buckets) {
+            n+=it.size();
         }
         return n;
     }
