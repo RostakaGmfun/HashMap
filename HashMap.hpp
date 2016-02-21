@@ -21,17 +21,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-
-/**
- * @biref A generic hash function
- *
- * Used by @HashMap.
- * Template specifications
- * should be provided for
- * for every required type.
- */
-template <typename T>
-std::size_t hash(const T &o);
+#include <string>
 
 /**
  * @biref Template class which represents 
@@ -199,7 +189,7 @@ public:
         if(!m_head)
             return end();
         for(const auto &it : *this) {
-            if((*it).value == v) {
+            if(it->value == v) {
                 return LinkedListIterator<T>(it);
             }
         }
@@ -321,12 +311,21 @@ public:
         }
     }
 
-    const ArrayIterator<T> &&begin() const {
+    ArrayIterator<T> &&begin() const {
         return std::move(ArrayIterator<T>(m_array));
     }
 
-    const ArrayIterator<T> &&end() const {
+    ArrayIterator<T> &&end() const {
         return std::move(ArrayIterator<T>(m_array+m_size));
+    }
+
+    ArrayIterator<T> find(const T &v) const {
+        for(auto &it : *this) {
+            if(it == v) {
+                return ArrayIterator<T>(&it);
+            }
+        }
+        return end();
     }
 
 private:
@@ -339,7 +338,7 @@ private:
  * @biref Iterator for @Array container
  */
 template <typename T>
-class ArrayIterator {
+class ArrayIterator : public std::iterator<std::forward_iterator_tag, T> {
 public:
     ArrayIterator(): m_itr(nullptr)
     {}
@@ -383,6 +382,73 @@ private:
     T *m_itr;
 };
 
+/**
+ * @biref A generic hash function
+ *
+ * Used by @HashMap.
+ * Template specifications
+ * should be provided for
+ * for every required type.
+ */
+template <typename T> std::size_t hash(const T&);
+
+/**
+ * @brief Hash function for std::string
+ *
+ * Uses djb2 hashing algorithm.
+ * http://www.cse.yorku.ca/~oz/hash.html
+ */
+template <>
+std::size_t hash(const std::string &str) {
+    std::size_t h = 5328;
+
+    for(auto ch : str) {
+        h = ((h << 5) + h) + ch;
+    }
+    return h;
+}
+
+/**
+ * @brief Hash function for std::int32_t
+ *
+ * Uses multiplication method;
+ * http://lcm.csa.iisc.ernet.in/dsa/node44.html
+ */
+template <>
+std::size_t hash(const std::int32_t &n) {
+    static const double goldenRatio = 0.6180339887;
+    double fractionPart = n*goldenRatio - std::size_t(n*goldenRatio);
+    return std::size_t(fractionPart*(2 << 30));
+}
+
+/**
+ * @brief Hash function for std::uint32_t
+ *
+ * Uses multiplication method;
+ * http://lcm.csa.iisc.ernet.in/dsa/node44.html
+ */
+template <>
+std::size_t hash(const std::uint32_t &n) {
+    static const double goldenRatio = 0.6180339887;
+    double fractionPart = n*goldenRatio - std::size_t(n*goldenRatio);
+    return std::size_t(fractionPart*(2 << 30));
+}
+
+/**
+ * @brief Hash function for Array of bytes
+ *
+ * Computes BSD checksum of byte array.
+ */
+template<>
+std::size_t hash(const Array<std::uint8_t> &arr) {
+    std::size_t checksum = 0;
+    for(const auto &it : arr) {
+        checksum = (checksum >> 1) + ((checksum & 1) << 32);
+        checksum+=it;
+    }
+    return checksum;
+}
+
 /*
  * @biref Template class which represents
  * hash map (table) - a generic key-value 
@@ -422,8 +488,25 @@ public:
         other.m_buckets.clear(); 
     }
 
+    V &get(const K &k) {
+        std::size_t hash = hash(k)%capacity();
+        const auto &bucket = m_buckets[hash];
+        for(const auto &it : bucket) {
+            if(it.key == k) {
+                return it.value;
+            }
+        }
+        bucket.pushBack(KeyVal(k, V{}));
+        if(float(size())/capacity()>=m_loadFactor) {
+            rehash();
+            return get(k);
+        } else {
+            return bucket[bucket.size()-1].value;
+        }
+    }
+
     V &operator[](const K &k) {
-        
+        return get(k);
     }
 
     std::size_t size() const {
@@ -434,11 +517,27 @@ public:
         return n;
     }
 
+    std::size_t capacity() const {
+        return m_buckets.size();
+    }
+
 private:
     void rehash();
 
 private:
-    Array<LinkedList<K>> m_buckets;
+
+    /**
+     * @brief A holder for
+     * key-value pairs in buckets.
+     */
+    struct KeyVal {
+        KeyVal(K k, V v): key(k), value(v)
+        {}
+        K key;
+        V value;
+    };
+
+    Array<LinkedList<KeyVal>> m_buckets;
     float m_loadFactor;
 };
 

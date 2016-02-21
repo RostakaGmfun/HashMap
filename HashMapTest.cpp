@@ -100,3 +100,55 @@ TEST_CASE("Array Test", "[Array]") {
     }
 }
 
+TEST_CASE("HashMap Test", "[HashMap]") {
+    SECTION("hash() Test") {
+        const int numHashes = 1000;
+        Array<std::size_t> hashes(numHashes);
+        int err = 0;
+
+        // test hash for std::string
+        const int numChars = 20;
+        for(int i = 0;i<numHashes;i++) {
+            std::string str;
+            for(int j = 0;j<numChars;j++) {
+                str.push_back('0'+std::rand()%('z'-'0'));
+            }
+            std::size_t h = hash(str);
+            if(*hashes.find(h) != *hashes.end()) {
+                err++;
+            }
+            hashes.pushBack(h);
+        }
+        CHECK( err == 0 );
+
+        // test hash for std::int32_t
+        hashes.clear();
+        err = 0;
+        for(int i = 0;i<numHashes;i++) {
+            std::size_t h = hash(std::int32_t(i));
+            if(*hashes.find(h) != *hashes.end()) {
+                err++;
+            }
+            hashes.pushBack(h);
+        }
+        CHECK( err == 0);
+
+        // test hash for byte array
+        hashes.clear();
+        err = 0;
+        for(int i = 1;i<numHashes+1;i++) {
+            Array<std::uint8_t> byteArray(i*2);
+            for(int j = 1;j<byteArray.capacity()+1; j++) {
+                byteArray.pushBack(std::rand()%255);
+            }
+            std::size_t h = hash(byteArray);
+            if(*hashes.find(h) != *hashes.end()) {
+                err++;
+            }
+            hashes.pushBack(h);
+        }
+        CHECK( err == 0);
+    }
+}
+
+
