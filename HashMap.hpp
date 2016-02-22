@@ -112,7 +112,7 @@ public:
         ListItem<T> *prev{};
 
         for(const auto &it : other) {
-            ListItem<T> *i = new ListItem<T>(it.value);
+            ListItem<T> *i = new ListItem<T>(it->value);
             if(!m_head) {
                 m_head = i;
             }
@@ -123,13 +123,6 @@ public:
         }
     }
     
-    LinkedList(LinkedList &&other): m_head(other.m_head),
-                                    m_tail(other.m_tail)                                 
-    {
-        other.m_head = nullptr;
-        other.m_tail = nullptr;
-    }
-
     ~LinkedList() {
         clear();
     }
@@ -301,6 +294,13 @@ public:
     }
 
     void pushBack(const T &element) {
+        if(!m_array) {
+            if(!m_capacity) {
+                m_capacity = 16;
+            }
+            m_array = new T[m_capacity];
+            m_size = 0;
+        }
         m_array[m_size++] = element;
         if(m_size>m_capacity) {
             m_capacity*=2;
@@ -308,6 +308,23 @@ public:
             std::copy(m_array, m_array+m_size, newArray);
             delete [] m_array;
             m_array = newArray;
+        }
+    }
+
+    void resize(std::size_t cap) {
+        if(cap == 0) {
+            delete m_array;
+            m_array = nullptr;
+            m_size = 0;
+            m_capacity = 0;
+            return;
+        }
+        T *newArray = new T[cap];
+        m_capacity = cap;
+        if(m_size>m_capacity) {
+            std::copy(m_array, m_array+m_capacity, newArray);
+        } else {
+            std::copy(m_array, m_array+m_size, newArray);
         }
     }
 
@@ -474,7 +491,11 @@ public:
             float loadFactor = 0.75f ):
             m_loadFactor(loadFactor),
             m_buckets(capacity)
-    {}
+    {
+        for(int i = 0;i<capacity;i++) {
+            m_buckets.pushBack(LinkedList<KeyVal>());
+        }
+    }
                                         
     HashMap(const HashMap &other):
             m_buckets(other.m_buckets),
@@ -489,11 +510,11 @@ public:
     }
 
     V &get(const K &k) {
-        std::size_t hash = hash(k)%capacity();
-        const auto &bucket = m_buckets[hash];
+        std::size_t h = hash(k)%capacity();
+        auto &bucket = m_buckets[h];
         for(const auto &it : bucket) {
-            if(it.key == k) {
-                return it.value;
+            if(it->value.key == k) {
+                return it->value.value;
             }
         }
         bucket.pushBack(KeyVal(k, V{}));
@@ -522,7 +543,27 @@ public:
     }
 
 private:
-    void rehash();
+    /**
+     * @brief Increases buckets count and
+     * performs complete rehashing of data
+     */
+    void rehash() {
+        // temporary std::map-like storage
+        Array<KeyVal> tempMap(size());
+        for(auto &it : m_buckets) {
+            for(const auto &jt : it) {
+                tempMap.pushBack(jt->value);
+            }
+            it.clear();
+        }
+        m_buckets.clear();
+        std::size_t oldCapacity = m_buckets.capacity();
+        m_buckets.resize(oldCapacity*2);
+
+        for(const auto &it : tempMap) {
+            get(it.key) = it.value;
+        }
+    }
 
 private:
 
@@ -531,7 +572,7 @@ private:
      * key-value pairs in buckets.
      */
     struct KeyVal {
-        KeyVal(K k, V v): key(k), value(v)
+        KeyVal(K k = K{}, V v = V{}): key(k), value(v)
         {}
         K key;
         V value;

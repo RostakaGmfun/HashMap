@@ -52,7 +52,6 @@ TEST_CASE( "LinkedList Test", "[LinkedList]") {
             list.pushBack(i);
         }
         
-        // dereference to overcome Catch dumbness
         REQUIRE( list.find(-1) == list.end() );
         REQUIRE( list.find(10)->next->value == 11 );
 
@@ -97,6 +96,27 @@ TEST_CASE("Array Test", "[Array]") {
         }
 
         REQUIRE( got == expected );
+    }
+
+    SECTION("Array resize") {
+        Array<int> array;
+        REQUIRE( array.size() == 0 );
+        REQUIRE( array.capacity() != 0 );
+
+        array.resize(0);
+        REQUIRE( array.capacity() == 0 );
+        REQUIRE( array.data() == nullptr );
+
+        array.pushBack(42);
+        REQUIRE( array.data() != nullptr );
+        REQUIRE( array.capacity() != 0 );
+        REQUIRE (array.size() == 1 );
+
+        array.resize(100);
+        REQUIRE( array.capacity() == 100);
+        REQUIRE( array.size() == 1 );
+        REQUIRE( array[0] == 42 );
+
     }
 }
 
@@ -148,6 +168,23 @@ TEST_CASE("HashMap Test", "[HashMap]") {
             hashes.pushBack(h);
         }
         CHECK( err == 0);
+    }
+
+    SECTION("HashMap basic test") {
+        HashMap<std::string, std::string> hashMap;
+        REQUIRE( hashMap.size() == 0 );
+        REQUIRE( hashMap.capacity() > 0 );
+
+        hashMap["key1"] = "value1";
+        REQUIRE( hashMap.size() == 1);
+        hashMap["key1"] = "newValue";
+        REQUIRE( hashMap.size() == 1);
+
+        hashMap["key2"] = "value2";
+        REQUIRE( hashMap.size() == 2);
+
+        REQUIRE( hashMap["key1"] == "newValue" );
+        REQUIRE( hashMap["key2"] == "value2" );
     }
 }
 
