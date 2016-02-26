@@ -9,13 +9,19 @@ TEST_CASE( "LinkedList Test", "[LinkedList]") {
         LinkedList<int> list;
         REQUIRE( list.isEmpty() == true );
 
+        const int numElements = 1000;
+
         std::string expected;
-        for(int i = 0;i<10;i++) {
+        int err = 0;
+        for(int i = 0;i<numElements;i++) {
             list.pushBack(i);
             expected+=std::to_string(i);
-            REQUIRE ( list[i] == i );
+            if(list[i] != i ) {
+                err++;
+            }
         }
-        REQUIRE( list.size() == 10 );
+        CHECK( err == 0 );
+        REQUIRE( list.size() == numElements );
 
         std::string got;
         for(const auto &it : list) {
@@ -185,6 +191,30 @@ TEST_CASE("HashMap Test", "[HashMap]") {
 
         REQUIRE( hashMap["key1"] == "newValue" );
         REQUIRE( hashMap["key2"] == "value2" );
+    }
+
+    SECTION("HashMapIterator test") {
+        HashMap<std::string, std::string> hashMap;
+        REQUIRE( hashMap.size() == 0 );
+        REQUIRE( hashMap.capacity() > 0 );
+
+        const int numElem = 100;
+
+        std::string expected;
+        for(int i = 0;i<numElem;i++) {
+            std::string k = "key"+std::to_string(i);
+            //hashMap[k] = "value";
+            //expected+=std::string("value"+std::to_string(i));
+        }
+
+        std::string got;
+        for(auto &it : hashMap) {
+            std::cout << it.value << std::endl;
+            got+=it.value;
+        }
+
+        REQUIRE( got == expected );
+        
     }
 }
 

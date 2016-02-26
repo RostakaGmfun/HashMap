@@ -56,14 +56,16 @@ public:
     }
     
     // pre-increment
-    LinkedListIterator &operator++() {
-        m_itr = m_itr->next;
+    LinkedListIterator operator++() {
+        if(m_itr) {
+            m_itr = m_itr->next;
+        }
     }
     
     // post-increment
-    LinkedListIterator &operator++(int) {
+    LinkedListIterator operator++(int) {
         LinkedListIterator itr(*this);
-        m_itr = m_itr->next;
+        operator++();
         return itr;
     }
 
@@ -120,7 +122,9 @@ public:
             if(i->prev) {
                 i->prev->next = i;
             }
+            prev = i;
         }
+        m_tail = prev;
     }
     
     ~LinkedList() {
@@ -143,7 +147,7 @@ public:
     }
 
     void pushBack(const T &val) {
-        if(!m_tail) {
+        if(!m_head) {
             m_head = new ListItem<T>(val);
             m_tail = m_head;
         } else {
@@ -166,7 +170,7 @@ public:
         }
         delete i;
     }
-    
+
     void remove(const LinkedListIterator<T> &i) {
         remove(*i);
     }
@@ -313,7 +317,9 @@ public:
 
     void resize(std::size_t cap) {
         if(cap == 0) {
-            delete m_array;
+            if(m_array) {
+                delete [] m_array;
+            }
             m_array = nullptr;
             m_size = 0;
             m_capacity = 0;
@@ -368,12 +374,12 @@ public:
     }
     
     // pre-increment
-    ArrayIterator &operator++() {
+    ArrayIterator operator++() {
         m_itr++;
     }
     
     // post-increment
-    ArrayIterator &operator++(int) {
+    ArrayIterator operator++(int) {
         ArrayIterator itr(*this);
         m_itr++;
         return itr;
@@ -466,6 +472,83 @@ std::size_t hash(const Array<std::uint8_t> &arr) {
     return checksum;
 }
 
+/**
+ * @brief A holder for
+ * key-value pairs in buckets.
+ */
+template <typename K, typename V>
+struct KeyVal {
+    KeyVal(K k = K{}, const V v = V{}): key(k), value(v)
+    {}
+    K key;
+    V value;
+};
+
+/**
+ * @brief Iterator for HashMap
+ * Linearely iterates over all key-value pairs
+ * of all buckets.
+ */
+template <typename K, typename V>
+class HashMapIterator: public std::iterator<std::forward_iterator_tag, KeyVal<K, V>> {
+public:
+    HashMapIterator()
+    {}
+
+    explicit HashMapIterator(ArrayIterator<LinkedList<KeyVal<K, V>>> storageItr,
+                            ArrayIterator<LinkedList<KeyVal<K, V>>> storageEnd):
+        m_storageItr(storageItr), 
+        m_itr((*storageItr).begin()), 
+        m_storageEnd(storageEnd)
+    {}
+
+    void swap(HashMapIterator &other) {
+        std::swap(m_storageItr, other.m_storageItr);
+        std::swap(m_itr, other.m_itr);
+    }
+    
+    // pre-increment
+    KeyVal<K, V> &operator++() {
+        m_itr++;
+        auto endOfBucket = (*m_storageItr).end();
+        if(m_itr == endOfBucket) {
+            if(++m_storageItr != m_storageEnd) {
+                m_itr = (*m_storageItr).begin();
+            }
+        }
+        return this->operator*();
+    }
+    
+    // post-increment
+    KeyVal<K, V> &operator++(int) {
+        HashMapIterator itr(*this);
+        m_itr++;
+        return itr->value;
+    }
+
+    KeyVal<K, V> &operator*() const {
+        return m_itr->value;
+    }
+    
+    KeyVal<K, V> &operator->() const {
+        return m_itr->value;
+    }
+
+    bool operator==(const HashMapIterator &other) const {
+        return m_itr == other.m_itr; 
+    }
+    
+    bool operator!=(const HashMapIterator &other) const {
+        return m_itr != other.m_itr; 
+    }
+
+private:
+    ArrayIterator<LinkedList<KeyVal<K, V>>>  m_storageItr;
+    ArrayIterator<LinkedList<KeyVal<K, V>>>  m_storageEnd;
+    LinkedListIterator<KeyVal<K, V>> m_itr;
+};
+
+
 /*
  * @biref Template class which represents
  * hash map (table) - a generic key-value 
@@ -492,9 +575,7 @@ public:
             m_loadFactor(loadFactor),
             m_buckets(capacity)
     {
-        for(int i = 0;i<capacity;i++) {
-            m_buckets.pushBack(LinkedList<KeyVal>());
-        }
+        initBuckets(capacity);
     }
                                         
     HashMap(const HashMap &other):
@@ -517,7 +598,7 @@ public:
                 return it->value.value;
             }
         }
-        bucket.pushBack(KeyVal(k, V{}));
+        bucket.pushBack(KeyVal<K, V>(k));
         if(float(size())/capacity()>=m_loadFactor) {
             rehash();
             return get(k);
@@ -542,44 +623,66 @@ public:
         return m_buckets.size();
     }
 
+    HashMapIterator<K, V> begin() const {
+        return HashMapIterator<K, V>(m_buckets.begin(),
+                                     m_buckets.end());
+    }
+
+    HashMapIterator<K, V> end() const {
+        return HashMapIterator<K, V>(m_buckets.end(),
+                                     m_buckets.end());
+    }
+
 private:
+
+    void initBuckets(std::size_t n) {
+        while(n--) {
+            m_buckets.pushBack(LinkedList<KeyVal<K, V>>());
+        }
+    }
+
     /**
      * @brief Increases buckets count and
      * performs complete rehashing of data
      */
     void rehash() {
+        if(size() == 0) {
+            return;
+        }
+        for(const auto &it : m_buckets) {
+            std::cout << it.size() << std::endl;
+        }
         // temporary std::map-like storage
-        Array<KeyVal> tempMap(size());
+        Array<KeyVal<K, V>> tempMap(size());
+        std::cerr << size() << std::endl;
         for(auto &it : m_buckets) {
             for(const auto &jt : it) {
                 tempMap.pushBack(jt->value);
             }
             it.clear();
         }
+        std::size_t cap = capacity()*2;
         m_buckets.clear();
-        std::size_t oldCapacity = m_buckets.capacity();
-        m_buckets.resize(oldCapacity*2);
+        m_buckets.resize(cap);
+        initBuckets(cap);
+
+        std::cerr << "rehashing" << std::endl;
 
         for(const auto &it : tempMap) {
-            get(it.key) = it.value;
+            std::size_t h = hash(it.key)%capacity();
+            auto &bucket = m_buckets[h];
+            bucket.pushBack(KeyVal<K, V>(it.key, it.value));
+            
+            std::cerr << "val: " << get(it.key) << std::endl;
         }
+
+        std::cerr << "rehashed" << std::endl;
     }
 
 private:
-
-    /**
-     * @brief A holder for
-     * key-value pairs in buckets.
-     */
-    struct KeyVal {
-        KeyVal(K k = K{}, V v = V{}): key(k), value(v)
-        {}
-        K key;
-        V value;
-    };
-
-    Array<LinkedList<KeyVal>> m_buckets;
+    Array<LinkedList<KeyVal<K, V>>> m_buckets;
     float m_loadFactor;
 };
+
 
 #endif // HASH_MAP
