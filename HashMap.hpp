@@ -306,7 +306,7 @@ public:
             m_size = 0;
         }
         m_array[m_size++] = element;
-        if(m_size>m_capacity) {
+        if(m_size==m_capacity) {
             m_capacity*=2;
             T *newArray = new T[m_capacity];
             std::copy(m_array, m_array+m_size, newArray);
@@ -642,16 +642,14 @@ private:
     }
 
     /**
-     * @brief Increases buckets count and
+     * @brief Increases bucket count and
      * performs complete rehashing of data
      */
     void rehash() {
         if(size() == 0) {
             return;
         }
-        for(const auto &it : m_buckets) {
-            std::cout << it.size() << std::endl;
-        }
+
         // temporary std::map-like storage
         Array<KeyVal<K, V>> tempMap(size());
         std::cerr << size() << std::endl;
@@ -666,17 +664,12 @@ private:
         m_buckets.resize(cap);
         initBuckets(cap);
 
-        std::cerr << "rehashing" << std::endl;
-
-        for(const auto &it : tempMap) {
-            std::size_t h = hash(it.key)%capacity();
+        for(int i = 0;i<tempMap.size();i++) {
+            std::size_t h = hash<K>(tempMap[i].key)%capacity();
             auto &bucket = m_buckets[h];
-            bucket.pushBack(KeyVal<K, V>(it.key, it.value));
-            
-            std::cerr << "val: " << get(it.key) << std::endl;
+            bucket.pushBack(KeyVal<K, V>(tempMap[i].key, tempMap[i].value));
         }
 
-        std::cerr << "rehashed" << std::endl;
     }
 
 private:

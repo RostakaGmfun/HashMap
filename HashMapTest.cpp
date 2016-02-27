@@ -11,6 +11,7 @@ TEST_CASE( "LinkedList Test", "[LinkedList]") {
 
         const int numElements = 1000;
 
+        REQUIRE( list.begin() == list.end() );
         std::string expected;
         int err = 0;
         for(int i = 0;i<numElements;i++) {
@@ -76,8 +77,6 @@ TEST_CASE("Array Test", "[Array]") {
             array.pushBack(i);
         }
 
-        REQUIRE( array.capacity() == oldCapacity );
-        array.pushBack(42);
         REQUIRE( array.capacity() == oldCapacity*2 );
         array.clear();
         REQUIRE( array.size() == 0 );
@@ -89,6 +88,8 @@ TEST_CASE("Array Test", "[Array]") {
         REQUIRE( array.data() != nullptr );
 
         const int numElements = 100;
+
+        REQUIRE( array.begin() == array.end() );
         
         std::string expected;
         for(int i = 0;i<numElements;i++) {
@@ -164,7 +165,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
         err = 0;
         for(int i = 1;i<numHashes+1;i++) {
             Array<std::uint8_t> byteArray(i*2);
-            for(int j = 1;j<byteArray.capacity()+1; j++) {
+            for(int j = 1;j<i*2; j++) {
                 byteArray.pushBack(std::rand()%255);
             }
             std::size_t h = hash(byteArray);
@@ -193,7 +194,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
         REQUIRE( hashMap["key2"] == "value2" );
     }
 
-    SECTION("HashMapIterator test") {
+     SECTION("HashMapIterator test") {
         HashMap<std::string, std::string> hashMap;
         REQUIRE( hashMap.size() == 0 );
         REQUIRE( hashMap.capacity() > 0 );
@@ -202,10 +203,11 @@ TEST_CASE("HashMap Test", "[HashMap]") {
 
         std::string expected;
         for(int i = 0;i<numElem;i++) {
-            std::string k = "key"+std::to_string(i);
-            //hashMap[k] = "value";
-            //expected+=std::string("value"+std::to_string(i));
+            hashMap["key"+std::to_string(i)] = "value"+std::to_string(i);
+            expected+=std::string("value"+std::to_string(i));
         }
+
+        REQUIRE( hashMap.size() == numElem);
 
         std::string got;
         for(auto &it : hashMap) {
