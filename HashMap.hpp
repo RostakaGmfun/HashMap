@@ -60,6 +60,7 @@ public:
         if(m_itr) {
             m_itr = m_itr->next;
         }
+        return *this;
     }
     
     // post-increment
@@ -334,6 +335,25 @@ public:
         }
     }
 
+    void reserve(std::size_t sz) {
+        if(sz == 0 || m_size != 0) {
+            return;
+        }
+        
+        m_size = sz;
+
+        if(m_size>=m_capacity) {
+            resize(m_size);
+        }
+    }
+
+    void reset() {
+        clear();
+        if(m_array) {
+            delete [] m_array;
+        }
+    }
+
     ArrayIterator<T> begin() const {
         return ArrayIterator<T>(m_array);
     }
@@ -513,6 +533,7 @@ public:
         auto endOfBucket = (*m_storageItr).end();
         if(m_itr == endOfBucket) {
             if(++m_storageItr != m_storageEnd) {
+                std::cerr << "next bucket" << std::endl;
                 m_itr = (*m_storageItr).begin();
             }
         }
@@ -633,12 +654,20 @@ public:
                                      m_buckets.end());
     }
 
+    void debugPrint() const {
+        int bid = 0;
+        for(const auto &it : m_buckets) {
+            std::cout << "Printing bucket " << bid++ << std::endl;
+            for(const auto &jt : it) {
+                std::cout << "\t" << jt->value.key << ":" << jt->value.value << std::endl;
+            }
+        }
+    }
+
 private:
 
     void initBuckets(std::size_t n) {
-        while(n--) {
-            m_buckets.pushBack(LinkedList<KeyVal<K, V>>());
-        }
+        m_buckets.reserve(n);
     }
 
     /**
@@ -652,7 +681,6 @@ private:
 
         // temporary std::map-like storage
         Array<KeyVal<K, V>> tempMap(size());
-        std::cerr << size() << std::endl;
         for(auto &it : m_buckets) {
             for(const auto &jt : it) {
                 tempMap.pushBack(jt->value);
@@ -660,16 +688,14 @@ private:
             it.clear();
         }
         std::size_t cap = capacity()*2;
-        m_buckets.clear();
-        m_buckets.resize(cap);
+        m_buckets.reset();
         initBuckets(cap);
 
-        for(int i = 0;i<tempMap.size();i++) {
-            std::size_t h = hash<K>(tempMap[i].key)%capacity();
+        for(const auto &it : tempMap) {
+            std::size_t h = hash(it.key)%capacity();
             auto &bucket = m_buckets[h];
-            bucket.pushBack(KeyVal<K, V>(tempMap[i].key, tempMap[i].value));
+            bucket.pushBack(KeyVal<K, V>(it.key, it.value));
         }
-
     }
 
 private:
