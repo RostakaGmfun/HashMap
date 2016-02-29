@@ -144,7 +144,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
             if(hashes.find(h) != hashes.end()) {
                 err++;
             }
-            hashes.pushBack(h);
+            hashes[i] = h;
         }
         CHECK( err == 0 );
 
@@ -156,7 +156,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
             if(hashes.find(h) != hashes.end()) {
                 err++;
             }
-            hashes.pushBack(h);
+            hashes[i] = h;
         }
         CHECK( err == 0);
 
@@ -172,7 +172,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
             if(hashes.find(h) != hashes.end()) {
                 err++;
             }
-            hashes.pushBack(h);
+            hashes[i] = h;
         }
         CHECK( err == 0);
     }
@@ -207,9 +207,9 @@ TEST_CASE("HashMap Test", "[HashMap]") {
             expected+=std::string("value"+std::to_string(i));
         }
 
-        REQUIRE( hashMap.size() == numElem);
-
         hashMap.debugPrint();
+
+        REQUIRE( hashMap.size() == numElem);
 
         std::string got;
         for(auto &it : hashMap) {
