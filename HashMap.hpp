@@ -1,133 +1,51 @@
 #ifndef HASH_MAP
 #define HASH_MAP
 
-/**
- * @file HashMap.hpp
- * @author Rostyslav Kurylo
- * @brief A dynamic hash map implementation
- *
- * The below implementation uses @LinkedList
- * to represent hash map buckets.
- * The buckets itself are held in dynamic
- * array implemented by @Array template class.
- * The @LinkedList and @Array containers
- * are not complete implementations of
- * underlying data structures and implement
- * only operations required by @HashMap.
- */
-
-#include <cstdint>
-#include <cstring>
-#include <algorithm>
+#include <cstddef>
 #include <cassert>
+#include <algorithm>
 #include <iostream>
-#include <string>
 
-/**
- * @biref Template class which represents 
- * single element of linked list.
- */
 template <typename T>
 struct ListItem {
-    ListItem(const T &v): value(v),
-                          prev(nullptr), 
-                          next(nullptr)
+    ListItem(const T &v, ListItem<T> *p = nullptr, 
+                      ListItem<T> *n = nullptr): 
+                                        value(v),
+                                        prev(p),
+                                        next(n)
     {}
-
+    ListItem<T> *prev;
+    ListItem<T> *next;
     T value;
-    ListItem *prev;
-    ListItem *next;
 };
 
-/**
- * @brief Iterator class for @LinkedList
- */
-template <typename T>
-class LinkedListIterator: public std::iterator<std::forward_iterator_tag, ListItem<T>> {
-public:
-    LinkedListIterator(): m_itr(nullptr)
-    {}
-
-    explicit LinkedListIterator(ListItem<T> *it): m_itr(it)
-    {}
-
-    void swap(LinkedListIterator &other) {
-        std::swap(m_itr, other.m_itr);
-    }
-    
-    // pre-increment
-    LinkedListIterator operator++() {
-        if(m_itr) {
-            m_itr = m_itr->next;
-        }
-        return *this;
-    }
-    
-    // post-increment
-    LinkedListIterator operator++(int) {
-        LinkedListIterator itr(*this);
-        operator++();
-        return itr;
-    }
-
-    ListItem<T> *operator*() const {
-        return m_itr;
-    }
-    
-    ListItem<T> *operator->() const {
-        return m_itr;
-    }
-
-    bool operator==(const LinkedListIterator &other) const {
-        return m_itr == other.m_itr; 
-    }
-    
-    bool operator!=(const LinkedListIterator &other) const {
-        return m_itr != other.m_itr; 
-    }
-
-private:
-    ListItem<T> *m_itr;
-};
-
-/*
- * @biref Template class which represents
- * linked list data structure.
- *
- * Every element of list is of type @ListItem.
- * Provides @begin() and @end() and can be
- * iterated like this:
- *
- * @code
- * for(auto &it : myList) {
- *      //do smth with it
- * }
- * @endcode
- */
 template <typename T>
 class LinkedList {
 public:
-    LinkedList(): m_head(nullptr),
-                  m_tail(nullptr)
+
+    LinkedList(): m_tail(nullptr),
+                  m_head(nullptr)
     {}
-
-    LinkedList(const LinkedList &other) {
-        ListItem<T> *prev{};
-
-        for(const auto &it : other) {
-            ListItem<T> *i = new ListItem<T>(it->value);
-            if(!m_head) {
-                m_head = i;
-            }
-            i->prev = prev;
-            if(i->prev) {
-                i->prev->next = i;
-            }
-            prev = i;
-        }
-        m_tail = prev;
-    }
     
+    // performs a deep copy of whole list
+    LinkedList(const LinkedList<T> &other) {
+        m_head = m_tail = nullptr;
+        ListItem<T> *i = other.m_head;
+        ListItem<T> *prev = nullptr;
+        while(i) {
+            ListItem<T> *j = new ListItem<T>(i->value);
+            if(!m_head) {
+                m_head = j;
+            }
+            if(prev) {
+                prev->next = j;
+            }
+            j->prev = prev;
+            m_tail = prev = j;
+            i = i->next;
+        }
+    }
+
     ~LinkedList() {
         clear();
     }
@@ -136,6 +54,7 @@ public:
         if(!m_head) {
             return;
         }
+
         ListItem<T> *i = m_head;
         ListItem<T> *tmp = nullptr;
         while(i) {
@@ -145,6 +64,18 @@ public:
         }
         m_head = nullptr;
         m_tail = nullptr;
+    }
+
+    std::size_t size() const {
+        if(!m_head) {
+            return 0;
+        }
+        std::size_t n = 0;
+        ListItem<T> *i = m_head;
+        do {
+            n++;
+        } while((i = i->next));
+        return n;
     }
 
     void pushBack(const T &val) {
@@ -157,10 +88,22 @@ public:
             m_tail = m_tail->next;
         }
     }
-
-    void remove(const ListItem<T> *i) {
-        if(!i)
+    
+    ListItem<T> *find(const T &val) {
+        ListItem<T> *i = m_head;
+        while(i) {
+            if(i->val == val) {
+                return i;
+            }
+            i = i->next;
+        }
+        return nullptr;
+    }
+    
+    void remove(ListItem<T> *i) {
+        if(!i) {
             return;
+        }
         ListItem<T> *prev = i->prev;
         ListItem<T> *next = i->next;
         if(prev) {
@@ -172,263 +115,112 @@ public:
         delete i;
     }
 
-    void remove(const LinkedListIterator<T> &i) {
-        remove(*i);
-    }
-
-    void remove(const std::size_t n) {
-        const auto &it = find(at(n));
-        if(it == end())
-            return;
-        remove(it);
-    }
-
-    LinkedListIterator<T> find(const T &v) {
-        if(!m_head)
-            return end();
-        for(const auto &it : *this) {
-            if(it->value == v) {
-                return LinkedListIterator<T>(it);
-            }
-        }
-        return end();
-    }
-    
-    std::size_t size() const {
-        if(!m_head)
-            return 0;
-        std::size_t n = 0;
+    T &get(std::size_t n) const {
         ListItem<T> *i = m_head;
-        do {
-            n++;
-        } while((i = i->next));
-        return n;
-    }
-
-    bool isEmpty() const { 
-        return size() == 0;
-    }
-
-    LinkedListIterator<T> begin() const {
-        return LinkedListIterator<T>(m_head);
-    }
-
-    LinkedListIterator<T> end() const {
-        return LinkedListIterator<T>(nullptr);
-    }
-
-    T &at(std::size_t n) const {
-        for(const auto &it : *this) {
+        while(i) {
             if(!n--) {
-                return it->value;
+                return i->value;
             }
+            i = i->next;
         }
     }
 
     T &operator[](std::size_t n) const {
-        return at(n);
+        return get(n);
     }
-    
+
+    T &tail() const {
+        assert(m_tail);
+        return m_tail->value;
+    }
+
+    void print() const {
+        ListItem<T> *i = m_head;
+        while(i) {
+            i = i->next;
+        }
+    }
+
 private:
     ListItem<T> *m_head;
     ListItem<T> *m_tail;
 
 };
 
-// forward declare to use in @Array
-template <typename T>
-class ArrayIterator;
+template <typename K, typename V>
+struct KeyVal {
+    KeyVal(K k = K{}, const V v = V{}): key(k), value(v)
+    {}
 
-/*
- * @biref Template class which represents
- * dynamic array.
- *
- * The array grows twice in size when it
- * becames full.
- */
-template <typename T>
-class Array {
+    std::ostream &write(std::ostream &s) const {
+        s << key << " : " << value;
+    }
+
+    K key;
+    V value;
+};
+
+template <typename K, typename V>
+std::ostream &operator<<(std::ostream &s, const KeyVal<K, V> &kv) {
+    kv.write(s);
+}
+
+template <typename K, typename V>
+class BucketPool {
 public:
-    Array(std::size_t capacity = 16): 
-                            m_size(0),
-                            m_capacity(capacity)
+    BucketPool(std::size_t size): m_pool(nullptr), m_poolSize(0)
     {
-        m_array = new T[m_capacity];
+        resize(size);
     }
 
-    Array(const Array &other) {
-        m_capacity = other.m_capacity;
-        m_size = other.m_size;
-        m_array = new T[m_capacity];
-        std::copy(other.m_array, other.m_array+other.m_size, m_array);
+    ~BucketPool() {
+        clear();
     }
-
-    Array(Array &&other) {
-        m_capacity = other.m_capacity;
-        m_size = other.m_size;
-        m_array = other.m_array;
-        other.m_size = 0;
-        other.m_capacity = 0;
-        other.m_array = nullptr;
-    }
-
-    ~Array() {
-        if(m_array) {
-            delete [] m_array;
+    
+    void clear() {
+        if(!m_pool) {
+            return;
         }
+
+        delete [] m_pool;
+        m_pool = nullptr;
+        m_poolSize = 0;
     }
 
-    // potentially unsafe
-    T &operator[](const std::size_t i) {
-        return m_array[i];
+
+    LinkedList<KeyVal<K, V>> &get(std::size_t n) {
+        assert(n<m_poolSize);
+        return m_pool[n];
+    }
+
+    LinkedList<KeyVal<K, V>> &operator[](std::size_t n) {
+        return get(n);
+    }
+
+    void resize(std::size_t newSize) {
+        if(!m_pool) {
+            m_pool = new LinkedList<KeyVal<K, V>>[newSize];
+            m_poolSize = newSize;
+        } else {
+            LinkedList<KeyVal<K, V>> *newPool = new LinkedList<KeyVal<K, V>>[newSize];
+            if(newSize>m_poolSize) {
+                std::copy(m_pool, m_pool+m_poolSize, newPool);
+            } else {
+                std::copy(m_pool, m_pool+newSize, newPool);
+            }
+            delete [] m_pool;
+            m_pool = newPool;
+            m_poolSize = newSize;
+        }
     }
 
     std::size_t size() const {
-        return m_size;
-    }
-
-    std::size_t capacity() const {
-        return m_capacity;
-    }
-
-    void clear() {
-        m_size = 0;
-    }
-
-    const T *data() const {
-        return m_array;
-    }
-
-    void pushBack(const T &element) {
-        if(!m_array) {
-            if(!m_capacity) {
-                m_capacity = 16;
-            }
-            m_array = new T[m_capacity];
-            m_size = 0;
-        }
-        m_array[m_size++] = element;
-        if(m_size==m_capacity) {
-            m_capacity*=2;
-            T *newArray = new T[m_capacity];
-            std::copy(m_array, m_array+m_size, newArray);
-            delete [] m_array;
-            m_array = newArray;
-        }
-    }
-
-    void resize(std::size_t cap) {
-        if(cap == 0) {
-            if(m_array) {
-                delete [] m_array;
-            }
-            m_array = nullptr;
-            m_size = 0;
-            m_capacity = 0;
-            return;
-        }
-        T *newArray = new T[cap];
-        m_capacity = cap;
-        if(m_size>m_capacity) {
-            std::memcpy(newArray, m_array, m_capacity*sizeof(T));
-            //std::copy(m_array, m_array+m_capacity, newArray);
-        } else {
-            std::memcpy(newArray, m_array, m_size*sizeof(T));
-            //std::copy(m_array, m_array+m_size, newArray);
-        }
-        delete [] m_array;
-        m_array = newArray;
-    }
-
-    void reserve(std::size_t sz) {
-        if(sz == 0 || m_size != 0) {
-            return;
-        }
-        
-        m_size = sz;
-        std::cout << "new size: " << m_size << std::endl;
-        if(m_size>=m_capacity) {
-            std::cout << "resizing array" << std::endl;
-            resize(m_size);
-        }
-    }
-
-    void reset() {
-        clear();
-        if(m_array) {
-            delete [] m_array;
-        }
-    }
-
-    ArrayIterator<T> begin() const {
-        return ArrayIterator<T>(m_array);
-    }
-
-    ArrayIterator<T> end() const {
-        return ArrayIterator<T>(m_array+m_size);
-    }
-
-    ArrayIterator<T> find(const T &v) const {
-        for(auto &it : *this) {
-            if(it == v) {
-                return ArrayIterator<T>(&it);
-            }
-        }
-        return end();
+        return m_poolSize;
     }
 
 private:
-    T *m_array;
-    std::size_t m_size;
-    std::size_t m_capacity;
-};
-
-/**
- * @biref Iterator for @Array container
- */
-template <typename T>
-class ArrayIterator : public std::iterator<std::forward_iterator_tag, T> {
-public:
-    ArrayIterator(): m_itr(nullptr)
-    {}
-
-    explicit ArrayIterator(T *data): m_itr(data)
-    {}
-
-    void swap(ArrayIterator &other) {
-        std::swap(m_itr, other.m_itr);
-    }
-    
-    // pre-increment
-    ArrayIterator operator++() {
-        m_itr++;
-    }
-    
-    // post-increment
-    ArrayIterator operator++(int) {
-        ArrayIterator itr(*this);
-        m_itr++;
-        return itr;
-    }
-
-    T &operator*() const {
-        return *m_itr;
-    }
-    
-    T &operator->() const {
-        return *m_itr;
-    }
-
-    bool operator==(const ArrayIterator &other) const {
-        return m_itr == other.m_itr; 
-    }
-    
-    bool operator!=(const ArrayIterator &other) const {
-        return m_itr != other.m_itr; 
-    }
-
-private:
-    T *m_itr;
+    LinkedList<KeyVal<K, V>> *m_pool;
+    std::size_t m_poolSize;
 };
 
 /**
@@ -483,225 +275,82 @@ std::size_t hash(const std::uint32_t &n) {
     return std::size_t(fractionPart*(2 << 30));
 }
 
-/**
- * @brief Hash function for Array of bytes
- *
- * Computes BSD checksum of byte array.
- */
-template<>
-std::size_t hash(const Array<std::uint8_t> &arr) {
-    std::size_t checksum = 0;
-    for(const auto &it : arr) {
-        checksum = (checksum >> 1) + ((checksum & 1) << 32);
-        checksum+=it;
-    }
-    return checksum;
-}
-
-/**
- * @brief A holder for
- * key-value pairs in buckets.
- */
-template <typename K, typename V>
-struct KeyVal {
-    KeyVal(K k = K{}, const V v = V{}): key(k), value(v)
-    {}
-    K key;
-    V value;
-};
-
-/**
- * @brief Iterator for HashMap
- * Linearely iterates over all key-value pairs
- * of all buckets.
- */
-template <typename K, typename V>
-class HashMapIterator: public std::iterator<std::forward_iterator_tag, KeyVal<K, V>> {
-public:
-    HashMapIterator()
-    {}
-
-    explicit HashMapIterator(LinkedList<KeyVal<K, V>> *storageItr,
-                            LinkedList<KeyVal<K, V>> *storageEnd):
-        m_storageItr(storageItr), 
-        m_itr((*storageItr).begin()), 
-        m_storageEnd(storageEnd)
-    {}
-
-    void swap(HashMapIterator &other) {
-        std::swap(m_storageItr, other.m_storageItr);
-        std::swap(m_itr, other.m_itr);
-    }
-    
-    // pre-increment
-    KeyVal<K, V> &operator++() {
-        m_itr++;
-        auto endOfBucket = (*m_storageItr).end();
-        if(m_itr == endOfBucket) {
-            if(++m_storageItr != m_storageEnd) {
-                m_itr = (*m_storageItr).begin();
-            }
-        }
-        return this->operator*();
-    }
-    
-    // post-increment
-    KeyVal<K, V> &operator++(int) {
-        HashMapIterator itr(*this);
-        m_itr++;
-        return itr->value;
-    }
-
-    KeyVal<K, V> &operator*() const {
-        return m_itr->value;
-    }
-    
-    KeyVal<K, V> &operator->() const {
-        return m_itr->value;
-    }
-
-    bool operator==(const HashMapIterator &other) const {
-        return m_itr == other.m_itr; 
-    }
-    
-    bool operator!=(const HashMapIterator &other) const {
-        return m_itr != other.m_itr; 
-    }
-
-private:
-    LinkedList<KeyVal<K, V>>  *m_storageItr;
-    LinkedList<KeyVal<K, V>>  *m_storageEnd;
-    LinkedListIterator<KeyVal<K, V>> m_itr;
-};
-
-
-/*
- * @biref Template class which represents
- * hash map (table) - a generic key-value 
- * container
- *
- * TODO: implement Iterator interface for @HashMap
- */
 template <typename K, typename V>
 class HashMap {
 public:
-
-    /*
-     * @brief HashMap constructor
-     *
-     * @param capacity Specifies initial number of buckets.
-     * @param loadFactor Specifies a factor treshhold,
-     * which can be computed like so: size/capacity.
-     * When it reaches the treshhold, the whole hash map
-     * is rehashed: the bucket size is increased by two
-     * and hashes are recalculated.
-     */
-    HashMap(std::size_t capacity = 16,
-            float loadFactor = 0.75f ):
-            m_loadFactor(loadFactor),
-            m_buckets(nullptr),
-            m_numBuckets(capacity)
-    {
-        m_buckets = new LinkedList< KeyVal<K, V>>[m_numBuckets];
-    }
-                                        
-    HashMap(const HashMap &other):
-            m_buckets(other.m_buckets),
-            m_loadFactor(other.m_loadFactor),
-            m_numBuckets(other.m_numBuckets)
+    HashMap( std::size_t capacity = 16, float loadFactor = 0.75): 
+                                        m_buckets(capacity),
+                                        m_loadFactor(loadFactor)
     {}
 
-    HashMap(HashMap &&other):
-            m_buckets(other.m_buckets),
-            m_loadFactor(other.m_loadFactor),
-            m_numBuckets(other.m_numBuckets)
-    {
-        other.m_buckets = nullptr;
+    std::size_t capacity() const {
+        return m_buckets.size();
+    }
+
+    std::size_t size() {
+        std::size_t n = 0;
+        for(int i = 0;i<m_buckets.size();i++) {
+            n+=m_buckets[i].size();
+        }
+        return n;
     }
 
     V &get(const K &k) {
-        std::size_t h = hash(k)%(capacity()-1);
-        auto &bucket = m_buckets[h];
-        for(const auto &it : bucket) {
-            if(it->value.key == k) {
-                return it->value.value;
+        std::size_t h = hash(k)%capacity();
+        auto &list = m_buckets[h];
+        for(int j = 0;j<list.size();j++) {
+            if(list[j].key == k) {
+                return list[j].value;
             }
         }
-        bucket.pushBack(KeyVal<K, V>(k, V{}));
-        if(float(size())/capacity()>=m_loadFactor) {
+
+        list.pushBack(KeyVal<K, V>(k, V{}));
+        if((float)size()/capacity()>=m_loadFactor) {
             rehash();
         }
-        return get(k);
+        return list.tail().value;
     }
 
     V &operator[](const K &k) {
         return get(k);
     }
 
-    std::size_t size() const {
-        std::size_t n = 0;
-        for(int i = 0;i<m_numBuckets;i++) {
-            n+=m_buckets[i].size();
-        }
-        return n;
-    }
-
-    std::size_t capacity() const {
-        return m_numBuckets;
-    }
-
-    HashMapIterator<K, V> begin() const {
-        return HashMapIterator<K, V>(m_buckets,
-                                     m_buckets+m_numBuckets);
-    }
-
-    HashMapIterator<K, V> end() const {
-        return HashMapIterator<K, V>(m_buckets+m_numBuckets,
-                                     m_buckets+m_numBuckets);
-    }
-
-    void debugPrint() const {
-        for(int i = 0;i<m_numBuckets;i++) {
-            std::cerr << "Printing bucket " << i << std::endl;
-            for(const auto &jt : m_buckets[i]) {
-                std::cerr << "\t" << jt->value.key << ":" << jt->value.value << std::endl;
+    void debugPrint() {
+        for(int i = 0;i<m_buckets.size();i++) {
+            for(int j = 0;j<m_buckets[i].size();j++) {
+                std::cerr << m_buckets[i][j] << std::endl;
             }
         }
     }
 
 private:
-
     /**
      * @brief Increases bucket count and
      * performs complete rehashing of data
      */
     void rehash() {
-        if(size() == 0) {
-            return;
-        }
-
-        // temporary std::map-like storage
-        Array<KeyVal<K, V>> tempMap(size());
-        for(int i = 0; i<m_numBuckets;i++) {
-            for(const auto &jt : m_buckets[i]) {
-                tempMap.pushBack(jt->value);
-                std::cerr << hash(jt->value.key)%capacity() << " : " << jt->value.value << std::endl;
+        KeyVal<K, V> *tempStorage = new KeyVal<K, V>[size()];
+        std::size_t n = 0;
+        for(int i = 0;i<m_buckets.size();i++) {
+            for(int j = 0;j<m_buckets[i].size();j++) {
+                tempStorage[n] = m_buckets[i][j];
             }
         }
-        m_numBuckets*=2;
-        delete [] m_buckets;
-        m_buckets = new LinkedList< KeyVal<K, V>>[m_numBuckets];
 
-        for(const auto &it : tempMap) {
-            std::size_t h = hash(it.key)%capacity();
+        std::size_t numBuckets = m_buckets.size();
+        m_buckets.clear();
+        m_buckets.resize(numBuckets*2);
+
+        for(int i = 0;i<n;i++) {
+            std::size_t h = hash(tempStorage[n].key)%capacity();
             auto &bucket = m_buckets[h];
-            bucket.pushBack(KeyVal<K, V>(it.key, it.value));
+            bucket.pushBack(tempStorage[n]);
         }
+
     }
 
 private:
-    LinkedList<KeyVal<K, V>> *m_buckets;
-    std::size_t m_numBuckets;
+    BucketPool<K, V> m_buckets;
     float m_loadFactor;
 };
 
