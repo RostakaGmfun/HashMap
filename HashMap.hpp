@@ -295,6 +295,10 @@ public:
         return n;
     }
 
+    float getLoad() {
+        return (float)size()/capacity();
+    }
+
     V &get(const K &k) {
         std::size_t h = hash(k)%capacity();
         auto &list = m_buckets[h];
@@ -307,7 +311,11 @@ public:
         list.pushBack(KeyVal<K, V>(k, V{}));
         if((float)size()/capacity()>=m_loadFactor) {
             rehash();
+            std::size_t newH = hash(k)%capacity();
+            auto &newList = m_buckets[newH];
+            return newList.tail().value;
         }
+
         return list.tail().value;
     }
 
@@ -332,8 +340,9 @@ private:
         KeyVal<K, V> *tempStorage = new KeyVal<K, V>[size()];
         std::size_t n = 0;
         for(int i = 0;i<m_buckets.size();i++) {
-            for(int j = 0;j<m_buckets[i].size();j++) {
-                tempStorage[n] = m_buckets[i][j];
+            auto &b = m_buckets[i];
+            for(int j = 0;j<b.size();j++) {
+                tempStorage[n++] = b[j];
             }
         }
 
@@ -342,11 +351,10 @@ private:
         m_buckets.resize(numBuckets*2);
 
         for(int i = 0;i<n;i++) {
-            std::size_t h = hash(tempStorage[n].key)%capacity();
+            std::size_t h = hash(tempStorage[i].key)%capacity();
             auto &bucket = m_buckets[h];
-            bucket.pushBack(tempStorage[n]);
+            bucket.pushBack(tempStorage[i]);
         }
-
     }
 
 private:
