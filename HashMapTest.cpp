@@ -72,7 +72,7 @@ TEST_CASE("HashMap Test", "[HashMap]") {
 
     }
 
-    SECTION("HashMap basic Test") {
+    SECTION("HashMap Test") {
         HashMap<std::string, std::string> dict;
 
         REQUIRE( dict.size() == 0 );
@@ -92,5 +92,28 @@ TEST_CASE("HashMap Test", "[HashMap]") {
         }
 
         REQUIRE( got.size() == expected.size() );
+    }
+
+    SECTION("HashMapIterator Test") {
+        HashMap<std::string, std::string> dict;
+
+        REQUIRE( dict.size() == 0 );
+        REQUIRE( dict.capacity()>0 );
+
+        const int numElem = 1000;
+
+        std::string expected;
+        for(int i = 0;i<numElem;i++) {
+            dict["key"+std::to_string(i)] = "value"+std::to_string(i);
+            expected+="value"+std::to_string(i);
+        }
+
+        std::string got;
+        for(const auto &it : dict) {
+            got+= it.value;
+        }
+
+        REQUIRE( got.size() == expected.size() );
+
     }
 }

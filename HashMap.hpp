@@ -188,12 +188,13 @@ public:
     }
 
 
-    LinkedList<KeyVal<K, V>> &get(std::size_t n) {
+    LinkedList<KeyVal<K, V>> &get(std::size_t n) const {
+        assert(m_pool);
         assert(n<m_poolSize);
         return m_pool[n];
     }
 
-    LinkedList<KeyVal<K, V>> &operator[](std::size_t n) {
+    LinkedList<KeyVal<K, V>> &operator[](std::size_t n) const {
         return get(n);
     }
 
@@ -275,6 +276,82 @@ std::size_t hash(const std::uint32_t &n) {
     return std::size_t(fractionPart*(2 << 30));
 }
 
+enum HashMapIteratorPos {
+    HASH_MAP_BEGIN,
+    HASH_MAP_END
+};
+
+template <typename K, typename V>
+class HashMapIterator: public std::iterator<std::forward_iterator_tag, KeyVal<K, V>> {
+public:
+
+    explicit HashMapIterator(HashMapIteratorPos pos,
+                             const BucketPool<K, V> &pool):
+                                        m_pos(pos),
+                                        m_pool(pool),
+                                        m_curItem(-1)
+    {
+        if(pos == HASH_MAP_BEGIN) {
+            m_curBucket = 0;
+            m_curItem = 0;
+        } else {
+            m_curBucket = m_pool.size()-1;
+            std::size_t psz = m_pool[m_curBucket].size()-1;
+            m_curItem = psz?psz:-1;
+        }
+        findNextBucket();
+    }
+
+    // pre-increment
+    HashMapIterator<K, V> &operator++() {
+        m_curItem++;
+        if(m_curItem>=m_pool[m_curBucket].size()) {
+            m_curBucket++;
+            m_curItem = 0;
+        }
+
+        findNextBucket();
+        return *this;
+    }
+
+    // post-increment
+    HashMapIterator<K, V> operator++(int) {
+        HashMapIterator itr(*this);
+        return itr;
+    }
+
+    KeyVal<K, V> &operator*() const {
+        return m_pool[m_curBucket][m_curItem];
+    }
+
+    KeyVal<K, V> &operator->() const {
+        return operator*();
+    }
+
+    bool operator==(const HashMapIterator &other) const {
+        return m_curBucket == other.m_curBucket &&
+               m_curItem == other.m_curItem;
+    }
+
+    bool operator!=(const HashMapIterator &other) const {
+        return !operator==(other);
+    }
+
+private:
+    void findNextBucket() {
+        while(m_curBucket < m_pool.size() && !m_pool[m_curBucket].size()) {
+            m_curBucket++;
+            m_curItem = 0;
+        }
+    }
+
+private:
+    HashMapIteratorPos m_pos;
+    const BucketPool<K, V> &m_pool;
+    int m_curBucket;
+    int m_curItem;
+};
+
 template <typename K, typename V>
 class HashMap {
 public:
@@ -329,6 +406,14 @@ public:
                 std::cerr << m_buckets[i][j] << std::endl;
             }
         }
+    }
+
+    HashMapIterator<K, V> begin() const {
+        return HashMapIterator<K, V>(HASH_MAP_BEGIN, m_buckets);
+    }
+
+    HashMapIterator<K, V> end() const {
+        return HashMapIterator<K, V>(HASH_MAP_END, m_buckets);
     }
 
 private:
