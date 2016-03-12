@@ -89,17 +89,6 @@ public:
         }
     }
     
-    ListItem<T> *find(const T &val) {
-        ListItem<T> *i = m_head;
-        while(i) {
-            if(i->val == val) {
-                return i;
-            }
-            i = i->next;
-        }
-        return nullptr;
-    }
-    
     void remove(ListItem<T> *i) {
         if(!i) {
             return;
@@ -132,13 +121,6 @@ public:
     T &tail() const {
         assert(m_tail);
         return m_tail->value;
-    }
-
-    void print() const {
-        ListItem<T> *i = m_head;
-        while(i) {
-            i = i->next;
-        }
     }
 
 private:
@@ -398,14 +380,6 @@ public:
 
     V &operator[](const K &k) {
         return get(k);
-    }
-
-    void debugPrint() {
-        for(int i = 0;i<m_buckets.size();i++) {
-            for(int j = 0;j<m_buckets[i].size();j++) {
-                std::cerr << m_buckets[i][j] << std::endl;
-            }
-        }
     }
 
     HashMapIterator<K, V> begin() const {
